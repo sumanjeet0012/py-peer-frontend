@@ -1,7 +1,8 @@
 # py-peer-frontend
 
 React + Vite + TypeScript web UI for the
-[Universal Connectivity](../universal-connectivity) `py-peer` implementation.
+[Universal Connectivity](https://github.com/sumanjeet0012/universal-connectivity)
+`py-peer` implementation.
 
 The frontend is a standalone project. It talks to the Python peer over the
 Tornado REST (`/api/v1/*`) and WebSocket (`/ws/*`) API and contains no Python

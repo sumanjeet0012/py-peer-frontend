@@ -11,6 +11,8 @@ export interface NodeInfo {
   peer_id: string
   nickname: string
   multiaddr: string
+  multiaddrs?: string[]
+  listen_addrs?: string[]
   port: number
   ready: boolean
   uptime_seconds: number

@@ -4,6 +4,8 @@ import {
   XMarkIcon,
   ClipboardIcon,
   ClipboardDocumentCheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from '@heroicons/react/24/outline'
 import { usePyPeer } from '../context/PyPeerContext'
 import PeerList from './PeerList'
@@ -22,8 +24,22 @@ export default function ConnectionPanel({ isOpen, onClose }: ConnectionPanelProp
   const [subscribing, setSubscribing] = useState(false)
   const [err, setErr] = useState('')
   const [topicErr, setTopicErr] = useState('')
-  const [copiedMultiaddr, setCopiedMultiaddr] = useState(false)
   const [copiedPeerId, setCopiedPeerId] = useState(false)
+  const [copiedAddrIndex, setCopiedAddrIndex] = useState<number | null>(null)
+  const [addressesExpanded, setAddressesExpanded] = useState(true)
+
+  const multiaddrs = (nodeInfo?.multiaddrs && nodeInfo.multiaddrs.length > 0)
+    ? nodeInfo.multiaddrs
+    : nodeInfo?.multiaddr
+    ? [nodeInfo.multiaddr]
+    : []
+
+  const copyAddr = (text: string, index: number) => {
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopiedAddrIndex(index)
+      setTimeout(() => setCopiedAddrIndex(null), 2000)
+    }).catch(() => {})
+  }
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -126,23 +142,75 @@ export default function ConnectionPanel({ isOpen, onClose }: ConnectionPanelProp
                               }
                               mono
                             />
-                            <Row
-                              label="Multiaddr"
-                              value={nodeInfo.multiaddr}
-                              action={
-                                <CopyBtn
-                                  copied={copiedMultiaddr}
-                                  onClick={() => copy(nodeInfo.multiaddr, setCopiedMultiaddr)}
-                                />
-                              }
-                              mono
-                            />
                             <Row label="Port" value={String(nodeInfo.port)} />
                             <Row
                               label="Uptime"
                               value={`${Math.floor(nodeInfo.uptime_seconds)}s`}
                             />
                           </div>
+                        </section>
+                      )}
+
+                      {/* Advertised Multiaddresses */}
+                      {multiaddrs.length > 0 && (
+                        <section>
+                          <div className="flex items-center justify-between mb-2">
+                            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                              Advertised Multiaddrs ({multiaddrs.length})
+                            </h2>
+                            <button
+                              type="button"
+                              onClick={() => setAddressesExpanded(!addressesExpanded)}
+                              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                            >
+                              <span>{addressesExpanded ? 'Collapse' : 'Expand'}</span>
+                              {addressesExpanded ? (
+                                <ChevronUpIcon className="h-3.5 w-3.5" />
+                              ) : (
+                                <ChevronDownIcon className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                          {addressesExpanded ? (
+                            <div className="rounded-lg bg-gray-50 border border-gray-200 divide-y divide-gray-200 max-h-56 overflow-y-auto">
+                              {multiaddrs.map((addr, idx) => {
+                                const badge = getTransportBadge(addr)
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="flex items-start justify-between gap-2 p-2.5 hover:bg-gray-100 transition-colors"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <span
+                                        className={`inline-block mb-1 px-1.5 py-0.5 text-[10px] font-semibold rounded border ${badge.color}`}
+                                      >
+                                        {badge.label}
+                                      </span>
+                                      <p className="font-mono text-xs text-gray-800 break-all select-all leading-relaxed">
+                                        {addr}
+                                      </p>
+                                    </div>
+                                    <CopyBtn
+                                      copied={copiedAddrIndex === idx}
+                                      onClick={() => copyAddr(addr, idx)}
+                                    />
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div
+                              onClick={() => setAddressesExpanded(true)}
+                              className="cursor-pointer rounded-lg bg-gray-50 border border-gray-200 p-2.5 hover:bg-gray-100 transition-colors"
+                            >
+                              <p className="text-xs text-gray-600 font-medium">
+                                {multiaddrs.length} multiaddress{multiaddrs.length > 1 ? 'es' : ''} available across transports
+                              </p>
+                              <p className="text-[11px] text-gray-400 truncate mt-0.5 font-mono">
+                                {multiaddrs[0]}
+                              </p>
+                            </div>
+                          )}
                         </section>
                       )}
 
@@ -289,4 +357,26 @@ function CopyBtn({ copied, onClick }: { copied: boolean; onClick: () => void }) 
       )}
     </button>
   )
+}
+
+function getTransportBadge(addr: string): { label: string; color: string } {
+  if (addr.includes('/webrtc-direct')) {
+    return { label: 'WebRTC Direct', color: 'bg-blue-100 text-blue-700 border-blue-200' }
+  }
+  if (addr.includes('/webrtc')) {
+    return { label: 'WebRTC', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' }
+  }
+  if (addr.includes('/webtransport')) {
+    return { label: 'WebTransport', color: 'bg-purple-100 text-purple-700 border-purple-200' }
+  }
+  if (addr.includes('/quic') || addr.includes('/quic-v1')) {
+    return { label: 'QUIC', color: 'bg-amber-100 text-amber-700 border-amber-200' }
+  }
+  if (addr.includes('/ws') || addr.includes('/wss')) {
+    return { label: 'WebSocket', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
+  }
+  if (addr.includes('/tcp/')) {
+    return { label: 'TCP', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' }
+  }
+  return { label: 'Multiaddr', color: 'bg-gray-100 text-gray-700 border-gray-200' }
 }

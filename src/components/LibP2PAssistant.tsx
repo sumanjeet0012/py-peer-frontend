@@ -15,12 +15,15 @@ async function askQuestion(question: string): Promise<{ answer: string; sources:
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question }),
   })
-  const data = await res.json().catch(() => null)
-  if (!res.ok || !data?.success) {
-    const message = typeof data?.error === 'string' ? data.error : `Request failed (HTTP ${res.status}).`
+  const json = await res.json().catch(() => null)
+  if (!res.ok || !json?.success) {
+    const message =
+      json?.error?.message ??
+      (typeof json?.error === 'string' ? json.error : `Request failed (HTTP ${res.status}).`)
     throw new Error(message)
   }
-  return { answer: data.answer, sources: data.sources ?? [] }
+  const payload = json.data ?? json
+  return { answer: payload.answer ?? '', sources: payload.sources ?? [] }
 }
 
 export default function LibP2PAssistant() {

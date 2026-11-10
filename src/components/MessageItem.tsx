@@ -8,7 +8,8 @@ interface MessageItemProps {
 }
 
 function formatTime(ts: number): string {
-  const d = new Date(ts * 1000)
+  const ms = ts > 1e11 ? ts : ts * 1000
+  const d = new Date(ms)
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 

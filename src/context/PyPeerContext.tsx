@@ -34,6 +34,7 @@ interface PeerPeerState {
 
 const PyPeerContext = createContext<PeerPeerState | null>(null)
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePyPeer(): PeerPeerState {
   const ctx = useContext(PyPeerContext)
   if (!ctx) throw new Error('usePyPeer must be used inside <PyPeerProvider>')
@@ -46,8 +47,16 @@ const DEFAULT_TOPIC = 'universal-connectivity'
 const POLL_INTERVAL = 5000
 const RETRY_INTERVAL = 3000
 
+function normalizeTimestamp(ts: number): number {
+  return ts > 1e11 ? ts / 1000 : ts
+}
+
 function sameMessage(a: ChatMessage, b: ChatMessage): boolean {
-  return a.timestamp === b.timestamp && a.sender_id === b.sender_id && a.message === b.message
+  return (
+    Math.abs(normalizeTimestamp(a.timestamp) - normalizeTimestamp(b.timestamp)) < 0.001 &&
+    a.sender_id === b.sender_id &&
+    a.message === b.message
+  )
 }
 
 export function PyPeerProvider({ children }: { children: React.ReactNode }) {
@@ -103,6 +112,10 @@ export function PyPeerProvider({ children }: { children: React.ReactNode }) {
     try {
       const { topics } = await api.getTopics()
       setTopics(topics)
+      const topicKeys = Object.keys(topics)
+      if (topicKeys.length > 0) {
+        setActiveTopic((curr) => (!topics[curr] ? topicKeys[0] : curr))
+      }
     } catch { /* silent */ }
   }, [])
 
@@ -150,8 +163,9 @@ export function PyPeerProvider({ children }: { children: React.ReactNode }) {
       ws.onmessage = (evt) => {
         try {
           const frame = JSON.parse(evt.data as string) as { event: string; data: ChatMessage }
-          const msg = frame.data
-          if (!msg?.topic) return
+          const rawMsg = frame.data
+          if (!rawMsg?.topic) return
+          const msg: ChatMessage = { ...rawMsg, timestamp: normalizeTimestamp(rawMsg.timestamp) }
 
           const isActive = msg.topic === activeTopicRef.current
 
@@ -273,9 +287,13 @@ export function PyPeerProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (cancelled) return
+        const normalizedHistory = history.map((m) => ({
+          ...m,
+          timestamp: normalizeTimestamp(m.timestamp),
+        }))
         setMessages((prev) => {
           const existing = prev[topic] ?? []
-          const merged = [...history]
+          const merged = [...normalizedHistory]
           for (const m of existing) {
             if (!merged.some((h) => sameMessage(h, m))) merged.push(m)
           }
@@ -314,6 +332,7 @@ export function PyPeerProvider({ children }: { children: React.ReactNode }) {
 
   const subscribeTopic = useCallback(async (topic: string) => {
     await api.subscribeTopic(topic)
+    setActiveTopic(topic)
     setTimeout(refreshTopics, 1000)
   }, [refreshTopics])
 

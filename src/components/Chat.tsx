@@ -111,14 +111,35 @@ export default function Chat() {
       <div className="flex flex-1 flex-col min-w-0">
         {/* Chat header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-          <div className="flex items-center gap-2">
+          {/* Desktop header title */}
+          <div className="hidden sm:flex items-center gap-2">
             <span className="text-base font-semibold text-gray-900">
               {activeTopic ? `# ${activeTopic}` : 'Select a topic'}
             </span>
           </div>
 
+          {/* Mobile topic selector dropdown */}
+          <div className="sm:hidden flex items-center gap-1.5 flex-1 min-w-0 mr-2">
+            <span className="text-sm font-semibold text-gray-400">#</span>
+            <select
+              value={activeTopic}
+              onChange={(e) => setActiveTopic(e.target.value)}
+              className="text-sm font-semibold text-gray-900 bg-gray-100 rounded-md py-1 px-2 border-0 focus:ring-1 focus:ring-indigo-500 cursor-pointer truncate max-w-[200px]"
+            >
+              {topicList.length === 0 ? (
+                <option value="">No topics</option>
+              ) : (
+                topicList.map(([t]) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
           <button
-            className="sm:hidden flex items-center gap-1 text-sm text-gray-500"
+            className="sm:hidden flex items-center gap-1 text-sm text-gray-500 flex-shrink-0"
             onClick={() => setShowMobilePeers((v) => !v)}
           >
             <UsersIcon className="h-5 w-5" />

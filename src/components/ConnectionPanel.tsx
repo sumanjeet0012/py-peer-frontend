@@ -28,11 +28,15 @@ export default function ConnectionPanel({ isOpen, onClose }: ConnectionPanelProp
   const [copiedAddrIndex, setCopiedAddrIndex] = useState<number | null>(null)
   const [addressesExpanded, setAddressesExpanded] = useState(true)
 
-  const multiaddrs = (nodeInfo?.multiaddrs && nodeInfo.multiaddrs.length > 0)
-    ? nodeInfo.multiaddrs
-    : nodeInfo?.multiaddr
-    ? [nodeInfo.multiaddr]
-    : []
+  // Show the advertised addresses in reverse of the order the API returns
+  // (most transports last). Copy is made so the source array is untouched.
+  const multiaddrs = [
+    ...((nodeInfo?.multiaddrs && nodeInfo.multiaddrs.length > 0)
+      ? nodeInfo.multiaddrs
+      : nodeInfo?.multiaddr
+      ? [nodeInfo.multiaddr]
+      : []),
+  ].reverse()
 
   const copyAddr = (text: string, index: number) => {
     navigator.clipboard?.writeText(text).then(() => {
